@@ -34,8 +34,29 @@ unsigned long starttid = 0;
 
 String mode = "";
 
+#include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+ #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
+#endif
+// Which pin on the Arduino is connected to the NeoPixels?
+#define PIN        22 // On Trinket or Gemma, suggest changing this to 1
+// How many NeoPixels are attached to the Arduino?
+#define NUMPIXELS 1 // Popular NeoPixel ring size
+// When setting up the NeoPixel library, we tell it how many pixels,
+// and which pin to use to send signals. Note that for older NeoPixel
+// strips you might need to change the third parameter -- see the
+// strandtest example for more information on possible values.
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+
+
+
+
+
 
 void setup() {
+  //neopixel
+  pixels.begin();
+
   //snurrknapp
   encoder.setPosition(10 / ROTARYSTEPS); // start with the value of 10.
 
@@ -59,8 +80,36 @@ void setup() {
   lcd.clear();
 }
 
+void lcd_pomodoro_setup() {
+  lcd.clear();
+  lcd.setCursor(0,1);
+  lcd.print("MODE "); //kom ihåg att börja Mode-symbol på 5
+  lcd.setCursor(8,1);
+  lcd.print("ROUNDS: "); // kom ihåg 15
+}
 
-void spela_buzzer(int buzztid, int paustid) {
+void update_lcd(int sel, int ny) {
+  if (sel == 1) { //mode
+    lcd.setCursor(5,0);
+    lcd.print(char(ny)); //ska senare göra if-satser för varje mode i strängform (som ex. NOR som normal idk)
+  }
+
+  if (sel == 2) { //cykler
+    lcd.setCursor(15,0);
+    lcd.print(char(ny));
+  }
+}
+
+bool lcd_update_checker() {
+  unsigned long sex = millis();
+  if ((sex % 10) == 7) {
+    return true;
+  }
+  return false;
+}
+
+
+void spela_buzzer(int buzztid, int paustid) { // behöver uppdateras pga aktiv buzzer!
   digitalWrite(buzzer, HIGH);
   delay(buzztid);
   digitalWrite(buzzer, LOW);
@@ -99,24 +148,25 @@ int kolla_knappar() {
 
   if (lastPos != newPos) {
     lastPos = newPos;
+    return newPos;
   } // if
 
   return 67;
 }
 
 
-unsigned long knapptid(int knapp, unsigned long sys_tid) {
-  unsigned long starttid = sys_tid;
-  int knapp_state = digitalRead(knapp);
-  while (knapp_state == HIGH) {
-    sluttid = sys_tid;
-  }
+unsigned long knapptid(int knapp) {
+  unsigned long starttid = millis();
+  while (digitalRead(knapp) == HIGH) {
+  } //pausar här tills den släpps.
+  sluttid = millis();
+
   unsigned long totaltid = sluttid - starttid;
   return totaltid;
 }
 
 
-void pris(int antal) {
+void pris(int antal, bool sista) {
   //sätt in dispenserfunktion
 
 }
@@ -158,16 +208,20 @@ void pomodorocykel(bool duktig, int priser) { //kan ta in en string som enkapsul
   //kontrollera mobil
   while (true) {
     unsigned long cykeltid = millis() - cykelstart;
-    
+    unsigned long tid_kvar = cykeltid/1000;
     if (kontrollera_mobil() == false) {
       varning();
     }
     
-    if (cykeltid <= 1500000) {
+    if (cykeltid >= 1500000) {
       break;
     }
+    
+    lcd.printCenter("Tid kvar:", 0);
+    lcd.printCenter(char(tid_kvar), 1);
   }
-  pris(priser);
+  bool sista = false;
+  pris(priser, sista);
 }
 
 
@@ -175,27 +229,38 @@ void pomodoromaskin(int loopar, String mode) { //skulle eventuellt kunna ha att 
   for (loopar > 0; loopar--;) {
     pomodorocykel(false, 1);
   }
-
 }
 
 
 void loop() {
-  unsigned long sys_tid = millis();
   int igang = 1;
   int steg = 1;
   //huvudsystemet
   
   while (igang == 1) {
-
+    
+    if (steg == 1) {
+    encoder.setPosition(0);
+    lastPos = 0;
+    }
     //steg 1: Vilka inställningar?
     while (steg == 1) {
+
+      if (lcd_update_checker()==true) {
+      update_lcd(steg, lastPos);
+      }
     
       int itryckt = kolla_knappar();
       // om knapp itryckt: hur länge är den itryckt? 
-      if (itryckt =! 67) {
-        unsigned long itryckt_tid = knapptid(itryckt, sys_tid);
+      if (itryckt != 67) {
+        pixels.setPixelColor(0, pixels.Color(150, 0, 0));
+        pixels.show();
+        itryckt_tid = knapptid(itryckt);
+        pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+        pixels.show();
         // ger tid i millisekunder som den är itryckt.
       }
+      else {itryckt_tid = 0;}
 
       //behövs kod för rot.encoder här.
       //mode = ""; mode ändras till något här som kommer användas till
@@ -210,15 +275,29 @@ void loop() {
 
     }
 
+    if (steg == 2) {
+    encoder.setPosition(0);
+    lastPos = 0;
+    }
+
     //steg 2: hur många cykler? Rot. encoder snurrar för att bestämma antal.
     while (steg == 2) {
+
+      if (lcd_update_checker()==true) {
+        update_lcd(steg, lastPos);
+      }
 
       int itryckt = kolla_knappar();
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
-        unsigned long itryckt_tid = knapptid(itryckt, sys_tid);
+        pixels.setPixelColor(0, pixels.Color(150, 0, 0));
+        pixels.show();
+        itryckt_tid = knapptid(itryckt);
+        pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+        pixels.show();
         // ger tid i millisekunder som den är itryckt.
       }
+      else {itryckt_tid = 0;}
 
       //grej för rot. encoder här oxå.
       
