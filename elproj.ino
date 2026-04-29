@@ -69,9 +69,9 @@ void setup() {
 
  //resten av knapparna
   pinMode(buzzer, OUTPUT);
-  pinMode(setupknapp, INPUT);
-  pinMode(startknapp, INPUT);
-  pinMode(lockinknapp, INPUT);
+  pinMode(setupknapp, INPUT_PULLUP);
+  pinMode(startknapp, INPUT_PULLUP);
+  pinMode(lockinknapp, INPUT_PULLUP);
 
   //startsignal
   lcd.print("Startar...");
@@ -110,6 +110,7 @@ void update_lcd(int sel) {
 
     lcd.setCursor(15,1);
     //print här
+    lcd.print(char("" + antal_pomodoro));
   }
 }
 
@@ -135,13 +136,13 @@ int kolla_knappar(int steg) {
   startknapp_state = digitalRead(startknapp);
   lockinknapp_state = digitalRead(lockinknapp);
 
-  if (setupknapp_state == HIGH) {
+  if (setupknapp_state == LOW) {
     return setupknapp;
   }
-  else if (startknapp_state == HIGH) {
+  else if (startknapp_state == LOW) {
     return startknapp;
   }
-  else if (lockinknapp_state == HIGH) {
+  else if (lockinknapp_state == LOW) {
     return lockinknapp;
   }
 
@@ -178,7 +179,7 @@ int kolla_knappar(int steg) {
 
 unsigned long knapptid(int knapp) {
   unsigned long starttid = millis();
-  while (digitalRead(knapp) == HIGH) {
+  while (digitalRead(knapp) == LOW) {
   } //pausar här tills den släpps.
   sluttid = millis();
 
@@ -246,23 +247,24 @@ void pomodorocykel(int mode) { //kan ta in en string som enkapsulerar båda ist�
         if (itryckt == 12 && itryckt_tid >= 5000) { //setupknapp
           break;
       }
+      }
 
     
     if (cykeltid >= 1500000) {
       break;
     }
-    
+    lcd.clear();
     lcd.printCenter("Tid kvar:", 0);
-    lcd.printCenter(char(tid_kvar), 1);
+    lcd.printCenter(tid_kvar, 1);
   }
   bool sista = false;
   pris(sista);
 }
-}
+
 
 
 void pomodoromaskin(int loopar, int mode) { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
-  for (loopar > 0; loopar--;) {
+  for (; loopar > 0; loopar--) {
     pomodorocykel(mode);
   }
 }
@@ -278,6 +280,7 @@ void loop() {
     if (steg == 1) {
     encoder.setPosition(0);
     lastPos = 0;
+    lcd_pomodoro_setup();
     }
     //steg 1: Vilka inställningar?
     while (steg == 1) {
@@ -307,6 +310,7 @@ void loop() {
       
       else if (itryckt == 19 && itryckt_tid >= 50) { //selectknapp
         steg = 2; // den kommer genom kolla_knappar registrera snurrningarna och sedan trycker man select för att gå vidare.
+        break;
       }
 
     }
@@ -314,11 +318,13 @@ void loop() {
     if (steg == 2) {
     encoder.setPosition(0);
     lastPos = 0;
+    lcd_pomodoro_setup();
     }
 
     //steg 2: hur många cykler? Rot. encoder snurrar för att bestämma antal.
+    
     while (steg == 2) {
-
+      
       if (lcd_update_checker()==true) {
         update_lcd(steg);
       }
@@ -339,10 +345,12 @@ void loop() {
       
       if (itryckt == 12 && itryckt_tid >= 50) { //setupknapp
         steg = 1;
+        break;
       }
       
       else if (itryckt == 19 && itryckt_tid >= 50) { //selectknapp
         steg = 3;
+        break;
       }
     
     }
