@@ -32,7 +32,8 @@ unsigned long itryckt_tid = 0;
 unsigned long sluttid = 0;
 unsigned long starttid = 0;
 
-String mode = "";
+int mode = 0;
+int antal_pomodoro = 1;
 
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
@@ -88,15 +89,27 @@ void lcd_pomodoro_setup() {
   lcd.print("ROUNDS: "); // kom ihåg 15
 }
 
-void update_lcd(int sel, int ny) {
+void update_lcd(int sel) {
   if (sel == 1) { //mode
-    lcd.setCursor(5,0);
-    lcd.print(char(ny)); //ska senare göra if-satser för varje mode i strängform (som ex. NOR som normal idk)
+    lcd.setCursor(5,1);
+    //modes:
+    ///0=standard/normal(nor), 1=test (tst), 2=coop (cop) 3= duktig(som normal fast ingen mobil)(duk), 4=display(öppna och snurra utan kortare tid)
+    if (mode == 0) {
+      lcd.print("nor");}
+    if (mode == 1) {
+      lcd.print("tst");}
+    if (mode == 2) {
+      lcd.print("cop");}
+    if (mode == 3){
+      lcd.print("duk");}
+    if (mode == 4){
+      lcd.print("dis");}
   }
 
   if (sel == 2) { //cykler
-    lcd.setCursor(15,0);
-    lcd.print(char(ny));
+
+    lcd.setCursor(15,1);
+    //print här
   }
 }
 
@@ -117,7 +130,7 @@ void spela_buzzer(int buzztid, int paustid) { // behöver uppdateras pga aktiv b
 }
 
 
-int kolla_knappar() {
+int kolla_knappar(int steg) {
   setupknapp_state = digitalRead(setupknapp);
   startknapp_state = digitalRead(startknapp);
   lockinknapp_state = digitalRead(lockinknapp);
@@ -148,7 +161,15 @@ int kolla_knappar() {
 
   if (lastPos != newPos) {
     lastPos = newPos;
-    return newPos;
+    if (steg==1) {
+      if (lastPos > 4) {
+        mode = 4;
+      }
+      else {mode = lastPos;}
+    }
+    else if (steg == 2) {
+      antal_pomodoro = lastPos;
+    }
   } // if
 
   return 67;
@@ -166,8 +187,8 @@ unsigned long knapptid(int knapp) {
 }
 
 
-void pris(int antal, bool sista) {
-  //sätt in dispenserfunktion
+void pris(bool sista) {
+  //sätt in dispenserfunktion och kyllådefunktion.
 
 }
 
@@ -202,16 +223,30 @@ void varning() {
 }
 
 
-void pomodorocykel(bool duktig, int priser) { //kan ta in en string som enkapsulerar båda istället
+void pomodorocykel(int mode) { //kan ta in en string som enkapsulerar båda istället
   //timerstart
   unsigned long cykelstart = millis();
   //kontrollera mobil
   while (true) {
+
     unsigned long cykeltid = millis() - cykelstart;
     unsigned long tid_kvar = cykeltid/1000;
     if (kontrollera_mobil() == false) {
       varning();
     }
+
+    int itryckt = kolla_knappar(3);
+      // om knapp itryckt: hur länge är den itryckt? 
+      if (itryckt != 67) {
+        pixels.setPixelColor(0, pixels.Color(150, 0, 0));
+        pixels.show();
+        itryckt_tid = knapptid(itryckt);
+        pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+        pixels.show();
+        if (itryckt == 12 && itryckt_tid >= 5000) { //setupknapp
+          break;
+      }
+
     
     if (cykeltid >= 1500000) {
       break;
@@ -221,13 +256,14 @@ void pomodorocykel(bool duktig, int priser) { //kan ta in en string som enkapsul
     lcd.printCenter(char(tid_kvar), 1);
   }
   bool sista = false;
-  pris(priser, sista);
+  pris(sista);
+}
 }
 
 
-void pomodoromaskin(int loopar, String mode) { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
+void pomodoromaskin(int loopar, int mode) { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
   for (loopar > 0; loopar--;) {
-    pomodorocykel(false, 1);
+    pomodorocykel(mode);
   }
 }
 
@@ -247,10 +283,10 @@ void loop() {
     while (steg == 1) {
 
       if (lcd_update_checker()==true) {
-      update_lcd(steg, lastPos);
+      update_lcd(steg);
       }
     
-      int itryckt = kolla_knappar();
+      int itryckt = kolla_knappar(steg);
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
         pixels.setPixelColor(0, pixels.Color(150, 0, 0));
@@ -284,10 +320,10 @@ void loop() {
     while (steg == 2) {
 
       if (lcd_update_checker()==true) {
-        update_lcd(steg, lastPos);
+        update_lcd(steg);
       }
 
-      int itryckt = kolla_knappar();
+      int itryckt = kolla_knappar(steg);
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
         pixels.setPixelColor(0, pixels.Color(150, 0, 0));
@@ -313,41 +349,40 @@ void loop() {
 
     //steg 3: kör programmet enligt instruktioner från 1-2.
     while (steg == 3) {
-      int loopar = 5; // ska kunna ändras i steg 2
-      //int antal_pomodorare = 1; //ska kunna ändras i steg 1
-      //bool duktig = false; //ska kunna ändras i steg 1
       // kör pomodoro här.
-      pomodoromaskin(loopar, mode); // lägg in de andra variablarna allt eftersom.
+      pomodoromaskin(antal_pomodoro, mode); // lägg in de andra variablarna allt eftersom.
       steg = 67;
       igang = 0;
     }
+    
   }
- 
- 
-  //Algoritm:
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Programmet");
+  lcd.setCursor(0, 1);
+  lcd.print("avslutas...");
+  delay(3000);
+
+}
+
+ //Algoritm:
   //1. välj antal cykler
   //1. välj om lockin-knapp
-  
   //2. starta system
 
-
-  //+ om setup hålls in i 8 sek startas display-mode, som bara gör att timern är mycket kortare (30 sek)
- 
   //loop här --->
   //timern igång:
   //här buzzer om telefon tas ut (del av telefonkoden)
-
   //timern avklarad
   //här väljs antingen godisdispenser, drycklock eller båda när tiden är slut.
 
   //<---- till hit. 
 
   //coola extrasaker:
+  //+ om setup hålls in i 8 sek startas display-mode, som bara gör att timern är mycket kortare (30 sek)
   // duktig-program: tar bort krav på mobilhållare:
   //Co-op: flera godisutmatningar
   
 
 
   //avslutningsmeddelande efter och sedan startas programmet om.
-
-}
