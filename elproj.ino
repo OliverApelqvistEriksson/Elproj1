@@ -2,8 +2,8 @@
 #include <Arduino.h>
 #include <RotaryEncoder.h>
 
-#define PIN_IN1 20
-#define PIN_IN2 21
+#define PIN_IN1 A1
+#define PIN_IN2 A2
 
 #define ROTARYSTEPS 2
 #define ROTARYMIN 0
@@ -20,9 +20,8 @@ DIYables_LCD_I2C lcd(0x27, 16, 2); // I2C address 0x27, 16 column and 2 rows
 
 
 const int buzzer = 26; //vet inte om det är rätt pin men whatevs
-const int setupknapp = 12;
-const int startknapp = 19;
-const int lockinknapp = 1; //är kanske inte här
+const int setupknapp = 9;
+const int startknapp = A0;
 
 int setupknapp_state = 0;
 int startknapp_state = 0;
@@ -40,7 +39,7 @@ int antal_pomodoro = 1;
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
 // Which pin on the Arduino is connected to the NeoPixels?
-#define PIN        22 // On Trinket or Gemma, suggest changing this to 1
+#define PIN        A3 // On Trinket or Gemma, suggest changing this to 1
 // How many NeoPixels are attached to the Arduino?
 #define NUMPIXELS 1 // Popular NeoPixel ring size
 // When setting up the NeoPixel library, we tell it how many pixels,
@@ -56,6 +55,7 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
   //neopixel
+  Serial.begin(9600);
   pixels.begin();
 
   //snurrknapp
@@ -71,7 +71,6 @@ void setup() {
   pinMode(buzzer, OUTPUT);
   pinMode(setupknapp, INPUT_PULLUP);
   pinMode(startknapp, INPUT_PULLUP);
-  pinMode(lockinknapp, INPUT_PULLUP);
 
   //startsignal
   lcd.print("Startar...");
@@ -134,7 +133,6 @@ void spela_buzzer(int buzztid, int paustid) { // behöver uppdateras pga aktiv b
 int kolla_knappar(int steg) {
   setupknapp_state = digitalRead(setupknapp);
   startknapp_state = digitalRead(startknapp);
-  lockinknapp_state = digitalRead(lockinknapp);
 
   if (setupknapp_state == LOW) {
     return setupknapp;
@@ -142,9 +140,7 @@ int kolla_knappar(int steg) {
   else if (startknapp_state == LOW) {
     return startknapp;
   }
-  else if (lockinknapp_state == LOW) {
-    return lockinknapp;
-  }
+
 
   encoder.tick();
 
@@ -244,7 +240,7 @@ void pomodorocykel(int mode) { //kan ta in en string som enkapsulerar båda ist�
         itryckt_tid = knapptid(itryckt);
         pixels.setPixelColor(0, pixels.Color(0, 150, 0));
         pixels.show();
-        if (itryckt == 12 && itryckt_tid >= 5000) { //setupknapp
+        if (itryckt == setupknapp && itryckt_tid >= 5000) { //setupknapp
           break;
       }
       }
@@ -304,11 +300,11 @@ void loop() {
       //behövs kod för rot.encoder här.
       //mode = ""; mode ändras till något här som kommer användas till
 
-      if (itryckt == 12 && itryckt_tid >= 5000) { //setupknapp
+      if (itryckt == setupknapp && itryckt_tid >= 5000) { //setupknapp
         // servo_öppnare() // typ nåt sånt här som låter en ladda upp med dricka.
       }
       
-      else if (itryckt == 19 && itryckt_tid >= 50) { //selectknapp
+      else if (itryckt == startknapp && itryckt_tid >= 50) { //selectknapp
         steg = 2; // den kommer genom kolla_knappar registrera snurrningarna och sedan trycker man select för att gå vidare.
         break;
       }
@@ -343,12 +339,12 @@ void loop() {
 
       //grej för rot. encoder här oxå.
       
-      if (itryckt == 12 && itryckt_tid >= 50) { //setupknapp
+      if (itryckt == setupknapp && itryckt_tid >= 50) { //setupknapp
         steg = 1;
         break;
       }
       
-      else if (itryckt == 19 && itryckt_tid >= 50) { //selectknapp
+      else if (itryckt == startknapp && itryckt_tid >= 50) { //selectknapp
         steg = 3;
         break;
       }
