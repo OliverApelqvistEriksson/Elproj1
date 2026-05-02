@@ -25,7 +25,7 @@ DIYables_LCD_I2C lcd(0x27, 16, 2); // I2C address 0x27, 16 column and 2 rows
 
 
 
-const int buzzer = 26; //vet inte om det är rätt pin men whatevs
+const int buzzer = 12; //vet inte om det är rätt pin men whatevs
 const int setupknapp = 9;
 const int startknapp = A0;
 
@@ -131,7 +131,7 @@ void update_lcd() {
 
     lcd.setCursor(15,1);
     //print här
-    lcd.print(("" + antal_pomodoro));
+    lcd.print((antal_pomodoro));
 }
 
 bool lcd_update_checker() {
@@ -144,9 +144,9 @@ bool lcd_update_checker() {
 
 
 void spela_buzzer(int buzztid, int paustid) { // behöver uppdateras pga aktiv buzzer!
-  digitalWrite(buzzer, HIGH);
+  tone(buzzer, 1000);
   delay(buzztid);
-  digitalWrite(buzzer, LOW);
+  noTone(buzzer);
   delay(paustid);
 }
 
