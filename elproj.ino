@@ -1,5 +1,7 @@
 //Från här -->
 #include <Arduino.h>
+
+/*
 #include <RotaryEncoder.h>
 
 #define PIN_IN1 A1
@@ -10,8 +12,12 @@
 #define ROTARYMAX 16
 
 RotaryEncoder encoder(PIN_IN1, PIN_IN2, RotaryEncoder::LatchMode::TWO03);
-int lastPos = -1;
+
 //<-- till här, delvis kopierad från https://github.com/mathertel/RotaryEncoder/blob/master/examples/LimitedRotator/LimitedRotator.ino
+
+*/
+int lastPos = -1;
+int newPos = 0;
 
 //lcd
 #include <DIYables_LCD_I2C.h> // Library for LCD
@@ -33,6 +39,20 @@ unsigned long starttid = 0;
 
 int mode = 0;
 int antal_pomodoro = 1;
+
+//försök 2 rot encoder
+#define CLK A1
+#define DT A2
+
+int counter = 0;
+int lastStateCLK;
+
+
+
+
+
+
+
 
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
@@ -59,7 +79,12 @@ void setup() {
   pixels.begin();
 
   //snurrknapp
-  encoder.setPosition(10 / ROTARYSTEPS); // start with the value of 10.
+  //encoder.setPosition(10 / ROTARYSTEPS); // start with the value of 10.
+  //snurrknapp lösning 2 lastStateCLK
+  pinMode(CLK, INPUT_PULLUP); // Critical for 3-pin encoders
+  pinMode(DT, INPUT_PULLUP);
+  Serial.begin(9600);
+  lastStateCLK = digitalRead(CLK);
 
   //lcd
   lcd.init(); //initialize the lcd
@@ -141,7 +166,7 @@ int kolla_knappar(int steg) {
     return startknapp;
   }
 
-
+  /*
   encoder.tick();
 
   // get the current physical position and calc the logical position
@@ -168,6 +193,32 @@ int kolla_knappar(int steg) {
       antal_pomodoro = lastPos;
     }
   } // if
+  */
+
+  int currentStateCLK = digitalRead(CLK);
+  if (currentStateCLK != lastStateCLK && currentStateCLK == HIGH) {
+    if (digitalRead(DT) != currentStateCLK) {
+      counter--; // Counter-clockwise
+    } else {
+      counter++; // Clockwise
+    }
+    Serial.println(counter);
+
+    if (lastStateCLK != currentStateCLK) {
+    
+    lastPos = newPos;
+    if (steg==1) {
+      if (lastPos > 4) {
+        mode = 4;
+      }
+      else {mode = lastStateCLK;}
+    }
+    else if (steg == 2) {
+      antal_pomodoro = lastStateCLK;
+    }
+  } // if
+  }
+  lastStateCLK = currentStateCLK;
 
   return 67;
 }
@@ -274,8 +325,10 @@ void loop() {
   while (igang == 1) {
     
     if (steg == 1) {
-    encoder.setPosition(0);
-    lastPos = 0;
+    //encoder.setPosition(0);
+    //lastPos = 0;
+    counter = 0;
+    lastStateCLK = 0;
     lcd_pomodoro_setup();
     }
     //steg 1: Vilka inställningar?
@@ -312,8 +365,10 @@ void loop() {
     }
 
     if (steg == 2) {
-    encoder.setPosition(0);
-    lastPos = 0;
+    //encoder.setPosition(0);
+    //lastPos = 0;
+    counter = 0;
+    lastStateCLK = 0;
     lcd_pomodoro_setup();
     }
 
