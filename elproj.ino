@@ -113,8 +113,7 @@ void lcd_pomodoro_setup() {
   lcd.print("ROUNDS: "); // kom ihåg 15
 }
 
-void update_lcd(int sel) {
-  if (sel == 1) { //mode
+void update_lcd() {
     lcd.setCursor(5,1);
     //modes:
     ///0=standard/normal(nor), 1=test (tst), 2=coop (cop) 3= duktig(som normal fast ingen mobil)(duk), 4=display(öppna och snurra utan kortare tid)
@@ -128,14 +127,11 @@ void update_lcd(int sel) {
       lcd.print("duk");}
     if (mode == 4){
       lcd.print("dis");}
-  }
 
-  if (sel == 2) { //cykler
 
     lcd.setCursor(15,1);
     //print här
-    lcd.print(char("" + antal_pomodoro));
-  }
+    lcd.print(("" + antal_pomodoro));
 }
 
 bool lcd_update_checker() {
@@ -199,24 +195,49 @@ int kolla_knappar(int steg) {
   if (currentStateCLK != lastStateCLK && currentStateCLK == HIGH) {
     if (digitalRead(DT) != currentStateCLK) {
       counter--; // Counter-clockwise
+      if (steg==1) {
+        if (counter > 4) {
+          mode = 4;
+        }
+        else if  (counter < 0) {
+          mode = 0;
+        }
+        else {mode = counter;}
+      }
+      else if (steg == 2) {
+        if (counter > 9) {
+          antal_pomodoro = 9;
+        }
+        else if  (counter < 1) {
+          antal_pomodoro = 1;
+        }
+        else {antal_pomodoro = counter;}
+      }
     } else {
       counter++; // Clockwise
+      if (steg==1) {
+         if (counter > 4) {
+          mode = 4;
+        }
+        else if  (counter < 0) {
+          mode = 0;
+        }
+        else {mode = counter;}
+      }
+      else if (steg == 2) {
+        if (counter > 9) {
+          antal_pomodoro = 9;
+        }
+        else if  (counter < 1) {
+          antal_pomodoro = 1;
+        }
+        else {antal_pomodoro = counter;}
+      }
     }
     Serial.println(counter);
 
-    if (lastStateCLK != currentStateCLK) {
-    
-    lastPos = newPos;
-    if (steg==1) {
-      if (lastPos > 4) {
-        mode = 4;
-      }
-      else {mode = lastStateCLK;}
-    }
-    else if (steg == 2) {
-      antal_pomodoro = lastStateCLK;
-    }
-  } // if
+      
+    } // if
   }
   lastStateCLK = currentStateCLK;
 
@@ -278,7 +299,7 @@ void pomodorocykel(int mode) { //kan ta in en string som enkapsulerar båda ist�
   while (true) {
 
     unsigned long cykeltid = millis() - cykelstart;
-    unsigned long tid_kvar = cykeltid/1000;
+    unsigned long tid_kvar = cykeltid%1000;
     if (kontrollera_mobil() == false) {
       varning();
     }
@@ -286,10 +307,10 @@ void pomodorocykel(int mode) { //kan ta in en string som enkapsulerar båda ist�
     int itryckt = kolla_knappar(3);
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
-        pixels.setPixelColor(0, pixels.Color(150, 0, 0));
+        pixels.setPixelColor(0, pixels.Color(100, 50, 0));
         pixels.show();
         itryckt_tid = knapptid(itryckt);
-        pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+        pixels.setPixelColor(0, pixels.Color(0, 100, 50));
         pixels.show();
         if (itryckt == setupknapp && itryckt_tid >= 5000) { //setupknapp
           break;
@@ -335,7 +356,7 @@ void loop() {
     while (steg == 1) {
 
       if (lcd_update_checker()==true) {
-      update_lcd(steg);
+      update_lcd();
       }
     
       int itryckt = kolla_knappar(steg);
@@ -377,7 +398,7 @@ void loop() {
     while (steg == 2) {
       
       if (lcd_update_checker()==true) {
-        update_lcd(steg);
+        update_lcd();
       }
 
       int itryckt = kolla_knappar(steg);
