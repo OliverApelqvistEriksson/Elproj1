@@ -362,7 +362,7 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
   while (true) {
 
     unsigned long cykeltid = millis() - cykelstart;
-    unsigned long tid_kvar = (cykeltid/1000);
+    unsigned long tid1 = (cykeltid/1000);
     if (kontrollera_mobil() == false) {
       varning();
     }
@@ -383,13 +383,14 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
 
 
       }
-    if ((cykeltid >= 20000) && (length == 0) ) {
+    if ((cykeltid >= 10000) && (length == 0) ) {
       break;
     }
     if (cykeltid >= 1500000) {
       break;
     }
     if (lcd_update_checker() == true) {
+      int tid_kvar = (1500000/1000)-tid1;
       lcd_tidkvar(tid_kvar);
     }
   }
