@@ -101,6 +101,8 @@ void setup() {
   pinMode(ena, OUTPUT);
   pinMode(enb, OUTPUT);
   myStepper.setSpeed(10);
+  analogWrite(ena, 5); 
+  analogWrite(enb, 5);
 
   //startsignal
   lcd.print("Startar...");
@@ -166,7 +168,7 @@ void update_lcd() {
 
 bool lcd_update_checker() { 
   unsigned long sixseven = millis();
-  if ((sixseven % 100) == 67) {
+  if ((sixseven % 1000) == 67) {
     return true;
   }
   return false;
@@ -309,8 +311,8 @@ void snurraStepper(int varv){
 
   // 2. Sänk till "Hållström" (Låst men svalare)
   // Testa dig fram, t.ex. 80 ger tillräckligt lås men mycket mindre värme
-  analogWrite(ena, 30); 
-  analogWrite(enb, 30);
+  analogWrite(ena, 5); 
+  analogWrite(enb, 5);
 }
 
 
