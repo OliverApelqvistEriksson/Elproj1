@@ -185,7 +185,7 @@ void lock() {
   }
   bool open = true;
   while (open){
-    int itryckt = kolla_knappar(steg);
+    int itryckt = kolla_knappar();
     // om knapp itryckt: hur länge är den itryckt? 
     if (itryckt != 67) {
       pixels.setPixelColor(0, pixels.Color(150, 0, 0));
@@ -253,7 +253,7 @@ void kontrollera_counter() {
   }
   lastStateCLK = currentStateCLK;
 }
-int kolla_knappar(int steg) {
+int kolla_knappar() {
   setupknapp_state = digitalRead(setupknapp);
   startknapp_state = digitalRead(startknapp);
 
@@ -355,7 +355,7 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
     }
 
     //den här delen funkar ju inte som den ska .......
-    int itryckt = kolla_knappar(3);
+    int itryckt = kolla_knappar();
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
         pixels.setPixelColor(0, pixels.Color(50, 50, 0));
@@ -393,17 +393,17 @@ void pomodoromaskin() { //skulle eventuellt kunna ha att den tar in en str som t
 
 
 void loop() {
-  int igang = 1;
-  int steg = 1;
+  igang = 1;
+  steg = 1;
+  mode = 0;
+  antal_pomodoro = 1;
   //huvudsystemet
   
   while (igang == 1) {
     
     if (steg == 1) {
-    //encoder.setPosition(0);
-    //lastPos = 0;
-    counter = 0;
-    lastStateCLK = 0;
+    counter = mode;
+    lastStateCLK = digitalRead(CLK);
     lcd_pomodoro_setup();
     }
     //steg 1: Vilka inställningar?
@@ -413,7 +413,7 @@ void loop() {
       update_lcd();
       }
     
-      int itryckt = kolla_knappar(steg);
+      int itryckt = kolla_knappar();
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
         pixels.setPixelColor(0, pixels.Color(100, 10, 50));
@@ -440,8 +440,8 @@ void loop() {
     }
 
     if (steg == 2) {
-    counter = 0;
-    lastStateCLK = 0;
+    counter = antal_pomodoro;
+    lastStateCLK = digitalRead(CLK);
     lcd_pomodoro_setup();
     }
 
@@ -453,7 +453,7 @@ void loop() {
         update_lcd();
       }
 
-      int itryckt = kolla_knappar(steg);
+      int itryckt = kolla_knappar();
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
         pixels.setPixelColor(0, pixels.Color(100, 50, 10));
