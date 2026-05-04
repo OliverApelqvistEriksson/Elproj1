@@ -115,6 +115,17 @@ void setup() {
 
 void lcd_pomodoro_setup() {
   lcd.clear();
+  
+  if (steg == 1) {
+    lcd.setCursor(0,0);
+    lcd.print("Steg 1 - mode"); 
+  }
+  else if (steg == 2) {
+    lcd.setCursor(0,0);
+    lcd.print("Steg 2 - antal"); 
+  }
+
+ 
   lcd.setCursor(0,1);
   lcd.print("MODE "); //kom ihåg att börja Mode-symbol på 5
   lcd.setCursor(8,1);
@@ -292,14 +303,14 @@ void dispenser(){
 }
 
 void snurraStepper(int varv){
-  analogWrite(ena, 225); 
-  analogWrite(enb, 225);
+  analogWrite(ena, 150); 
+  analogWrite(enb, 150);
   myStepper.step(varv*stepsPerRev);
 
   // 2. Sänk till "Hållström" (Låst men svalare)
   // Testa dig fram, t.ex. 80 ger tillräckligt lås men mycket mindre värme
-  analogWrite(ena, 150); 
-  analogWrite(enb, 150);
+  analogWrite(ena, 30); 
+  analogWrite(enb, 30);
 }
 
 
@@ -393,7 +404,7 @@ void pomodoromaskin() { //skulle eventuellt kunna ha att den tar in en str som t
 
 
 void loop() {
-  igang = 1;
+  int igang = 1;
   steg = 1;
   mode = 0;
   antal_pomodoro = 1;
