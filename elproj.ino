@@ -22,6 +22,18 @@
 // strips you might need to change the third parameter -- see the
 // strandtest example for more information on possible values.
 
+// Servobibblan
+#include <Servo.h>
+
+// Servopin
+int servoPin = 10;
+
+// Variabel för att förvara servopositionen
+int pos;
+
+//Servoobjekt
+Servo Servo1;
+
 
 DIYables_LCD_I2C lcd(0x27, 16, 2); // I2C address 0x27, 16 column and 2 rows
 
@@ -78,6 +90,7 @@ void setup() {
   lcd.backlight(); //open the backlight
   lcd.setCursor(5, 0);
 
+  Servo1.attach(servoPin);
 
  //resten av knapparna
   pinMode(buzzer, OUTPUT);
@@ -162,6 +175,36 @@ void spela_truddilutt(int buzztid, int crescendo) {
     tone(buzzer, ton);
     delay(1);
     noTone(buzzer);
+  }
+}
+
+void lock() {
+  for (pos = 90 ;pos >= 0; pos--){
+    Servo1.write(pos);
+    delay(15);
+  }
+  bool open = true;
+  while (open){
+    int itryckt = kolla_knappar(steg);
+    // om knapp itryckt: hur länge är den itryckt? 
+    if (itryckt != 67) {
+      pixels.setPixelColor(0, pixels.Color(150, 0, 0));
+      pixels.show();
+      itryckt_tid = knapptid(itryckt);
+      pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+      pixels.show();
+      // ger tid i millisekunder som den är itryckt.
+    }
+    else {itryckt_tid = 0;}
+
+    if (itryckt == startknapp && itryckt_tid >= 20) { //startknapp
+      // lock stängs
+      for (pos = 0; pos <= 90; pos++) {
+        Servo1.write(pos);
+        delay(15);
+      }
+      break;
+    }
   }
 }
 
@@ -262,7 +305,10 @@ void snurraStepper(int varv){
 
 void pris(bool sista) {
   //sätt in dispenserfunktion och kyllådefunktion.
-
+  dispenser();
+  if (sista == true) {
+    lock();
+  }
 }
 
 
