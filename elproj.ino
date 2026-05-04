@@ -1,29 +1,35 @@
-//Från här -->
-#include <Arduino.h>
-
-/*
-#include <RotaryEncoder.h>
-
-#define PIN_IN1 A1
-#define PIN_IN2 A2
-
-#define ROTARYSTEPS 2
-#define ROTARYMIN 0
-#define ROTARYMAX 16
-
-RotaryEncoder encoder(PIN_IN1, PIN_IN2, RotaryEncoder::LatchMode::TWO03);
-
-//<-- till här, delvis kopierad från https://github.com/mathertel/RotaryEncoder/blob/master/examples/LimitedRotator/LimitedRotator.ino
-
-*/
-int lastPos = -1;
-int newPos = 0;
 
 //lcd
 #include <DIYables_LCD_I2C.h> // Library for LCD
+#include <Stepper.h> // stepper motor
+#include <Adafruit_NeoPixel.h> //gissa
+
+//försök 2 rot encoder
+#define CLK A1
+#define DT A2
+
+
+
+#ifdef __AVR__
+ #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
+#endif
+// Which pin on the Arduino is connected to the NeoPixels?
+#define PIN        A3 // On Trinket or Gemma, suggest changing this to 1
+// How many NeoPixels are attached to the Arduino?
+#define NUMPIXELS 1 // Popular NeoPixel ring size
+// When setting up the NeoPixel library, we tell it how many pixels,
+// and which pin to use to send signals. Note that for older NeoPixel
+// strips you might need to change the third parameter -- see the
+// strandtest example for more information on possible values.
+
+
 DIYables_LCD_I2C lcd(0x27, 16, 2); // I2C address 0x27, 16 column and 2 rows
 
+const int stepsPerRev = 200;
+Stepper myStepper(stepsPerRev, 4, 3, 7, 8);
 
+const int ena = 6;
+const int enb = 5;
 
 const int buzzer = 12; //vet inte om det är rätt pin men whatevs
 const int setupknapp = 9;
@@ -39,10 +45,7 @@ unsigned long starttid = 0;
 
 int mode = 0;
 int antal_pomodoro = 1;
-
-//försök 2 rot encoder
-#define CLK A1
-#define DT A2
+int steg;
 
 int counter = 0;
 int lastStateCLK;
@@ -50,22 +53,6 @@ int lastStateCLK;
 
 
 
-
-
-
-
-#include <Adafruit_NeoPixel.h>
-#ifdef __AVR__
- #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
-#endif
-// Which pin on the Arduino is connected to the NeoPixels?
-#define PIN        A3 // On Trinket or Gemma, suggest changing this to 1
-// How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS 1 // Popular NeoPixel ring size
-// When setting up the NeoPixel library, we tell it how many pixels,
-// and which pin to use to send signals. Note that for older NeoPixel
-// strips you might need to change the third parameter -- see the
-// strandtest example for more information on possible values.
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 
@@ -96,13 +83,21 @@ void setup() {
   pinMode(buzzer, OUTPUT);
   pinMode(setupknapp, INPUT_PULLUP);
   pinMode(startknapp, INPUT_PULLUP);
+  
+  // stepper motor
+  pinMode(ena, OUTPUT);
+  pinMode(enb, OUTPUT);
+  myStepper.setSpeed(10);
 
   //startsignal
   lcd.print("Startar...");
   delay(1000);
-  spela_buzzer(100, 200);
-  spela_buzzer(100, 500);
+  pixels.setPixelColor(0, pixels.Color(50, 50, 50));
+  pixels.show();
+  spela_truddilutt(1000, 2000);
   lcd.clear();
+
+
 }
 
 void lcd_pomodoro_setup() {
@@ -111,6 +106,17 @@ void lcd_pomodoro_setup() {
   lcd.print("MODE "); //kom ihåg att börja Mode-symbol på 5
   lcd.setCursor(8,1);
   lcd.print("ROUNDS: "); // kom ihåg 15
+}
+
+void lcd_tidkvar(int kvar) {
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Aktiv Pomodoro!");
+  lcd.setCursor(0,1);
+  lcd.print("Kvar: ");
+  lcd.setCursor(6, 1);
+  lcd.print(kvar);
+
 }
 
 void update_lcd() {
@@ -134,9 +140,9 @@ void update_lcd() {
     lcd.print((antal_pomodoro));
 }
 
-bool lcd_update_checker() {
-  unsigned long sex = millis();
-  if ((sex % 10) == 7) {
+bool lcd_update_checker() { 
+  unsigned long sixseven = millis();
+  if ((sixseven % 100) == 67) {
     return true;
   }
   return false;
@@ -149,98 +155,75 @@ void spela_buzzer(int buzztid, int paustid) { // behöver uppdateras pga aktiv b
   noTone(buzzer);
   delay(paustid);
 }
-
-
-int kolla_knappar(int steg) {
-  setupknapp_state = digitalRead(setupknapp);
-  startknapp_state = digitalRead(startknapp);
-
-  if (setupknapp_state == LOW) {
-    return setupknapp;
+void spela_truddilutt(int buzztid, int crescendo) {
+  int inc = crescendo / buzztid;
+  for (int x; x < buzztid; x++) {
+    int ton = x*inc;
+    tone(buzzer, ton);
+    delay(1);
+    noTone(buzzer);
   }
-  else if (startknapp_state == LOW) {
-    return startknapp;
-  }
+}
 
-  /*
-  encoder.tick();
 
-  // get the current physical position and calc the logical position
-  int newPos = encoder.getPosition() * ROTARYSTEPS;
-
-  if (newPos < ROTARYMIN) {
-    encoder.setPosition(ROTARYMIN / ROTARYSTEPS);
-    newPos = ROTARYMIN;
-
-  } else if (newPos > ROTARYMAX) { 
-    encoder.setPosition(ROTARYMAX / ROTARYSTEPS);
-    newPos = ROTARYMAX;
-  } // if
-
-  if (lastPos != newPos) {
-    lastPos = newPos;
-    if (steg==1) {
-      if (lastPos > 4) {
-        mode = 4;
-      }
-      else {mode = lastPos;}
-    }
-    else if (steg == 2) {
-      antal_pomodoro = lastPos;
-    }
-  } // if
-  */
+void kontrollera_counter() {
+  int max1 = 4;
+  int max2 = 9;
 
   int currentStateCLK = digitalRead(CLK);
   if (currentStateCLK != lastStateCLK && currentStateCLK == HIGH) {
     if (digitalRead(DT) != currentStateCLK) {
       counter--; // Counter-clockwise
-      if (steg==1) {
-        if (counter > 4) {
-          mode = 4;
-        }
-        else if  (counter < 0) {
+      if (steg == 1) {
+        if  (counter < 0) {
           mode = 0;
-        }
-        else {mode = counter;}
+          counter = 0;
       }
+      else {mode = counter;}
+      }
+      
       else if (steg == 2) {
-        if (counter > 9) {
-          antal_pomodoro = 9;
-        }
-        else if  (counter < 1) {
+        if  (counter < 1) {
           antal_pomodoro = 1;
+          counter = 1;
         }
         else {antal_pomodoro = counter;}
       }
-    } else {
+    } 
+    else {
       counter++; // Clockwise
-      if (steg==1) {
-         if (counter > 4) {
-          mode = 4;
-        }
-        else if  (counter < 0) {
-          mode = 0;
+      if (steg == 1) {
+         if (counter > max1) {
+          mode = max1;
+          counter = max1;
         }
         else {mode = counter;}
       }
       else if (steg == 2) {
         if (counter > 9) {
           antal_pomodoro = 9;
-        }
-        else if  (counter < 1) {
-          antal_pomodoro = 1;
+          counter = max2;
         }
         else {antal_pomodoro = counter;}
       }
     }
-    Serial.println(counter);
-
-      
-    } // if
   }
   lastStateCLK = currentStateCLK;
+}
+int kolla_knappar(int steg) {
+  setupknapp_state = digitalRead(setupknapp);
+  startknapp_state = digitalRead(startknapp);
 
+  if (setupknapp_state == LOW) {
+    spela_buzzer(100, 0);
+    return setupknapp;
+  }
+  else if (startknapp_state == LOW) {
+    spela_buzzer(100, 0);
+    return startknapp;
+  }
+
+  kontrollera_counter();
   return 67;
 }
 
@@ -253,6 +236,27 @@ unsigned long knapptid(int knapp) {
 
   unsigned long totaltid = sluttid - starttid;
   return totaltid;
+}
+
+void dispenser(){
+  // 1. Full kraft för att röra på sig (ca 1.5A - 2A beroende på värde)
+  int i;
+  if (mode == 2) { i = 2;}
+  else { i = 1; }
+  snurraStepper(i);
+  delay(5000); // Vänta 5 sekunder låst
+
+}
+
+void snurraStepper(int varv){
+  analogWrite(ena, 225); 
+  analogWrite(enb, 225);
+  myStepper.step(varv*stepsPerRev);
+
+  // 2. Sänk till "Hållström" (Låst men svalare)
+  // Testa dig fram, t.ex. 80 ger tillräckligt lås men mycket mindre värme
+  analogWrite(ena, 150); 
+  analogWrite(enb, 150);
 }
 
 
@@ -292,48 +296,52 @@ void varning() {
 }
 
 
-void pomodorocykel(int mode) { //kan ta in en string som enkapsulerar båda istället
+void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda istället
   //timerstart
   unsigned long cykelstart = millis();
   //kontrollera mobil
   while (true) {
 
     unsigned long cykeltid = millis() - cykelstart;
-    unsigned long tid_kvar = cykeltid%1000;
+    unsigned long tid_kvar = (cykeltid/1000);
     if (kontrollera_mobil() == false) {
       varning();
     }
 
+    //den här delen funkar ju inte som den ska .......
     int itryckt = kolla_knappar(3);
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
-        pixels.setPixelColor(0, pixels.Color(100, 50, 0));
+        pixels.setPixelColor(0, pixels.Color(50, 50, 0));
         pixels.show();
         itryckt_tid = knapptid(itryckt);
-        pixels.setPixelColor(0, pixels.Color(0, 100, 50));
+        pixels.setPixelColor(0, pixels.Color(0, 50, 50));
         pixels.show();
         if (itryckt == setupknapp && itryckt_tid >= 5000) { //setupknapp
-          break;
-      }
+          return;
       }
 
-    
+
+
+      }
+    if ((cykeltid >= 20000) && (length == 0) ) {
+      break;
+    }
     if (cykeltid >= 1500000) {
       break;
     }
-    lcd.clear();
-    lcd.printCenter("Tid kvar:", 0);
-    lcd.printCenter(tid_kvar, 1);
+    if (lcd_update_checker() == true) {
+      lcd_tidkvar(tid_kvar);
+    }
   }
   bool sista = false;
   pris(sista);
 }
 
 
-
-void pomodoromaskin(int loopar, int mode) { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
-  for (; loopar > 0; loopar--) {
-    pomodorocykel(mode);
+void pomodoromaskin() { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
+  for (; antal_pomodoro > 0; antal_pomodoro--) {
+    pomodorocykel(25);
   }
 }
 
@@ -362,10 +370,10 @@ void loop() {
       int itryckt = kolla_knappar(steg);
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
-        pixels.setPixelColor(0, pixels.Color(150, 0, 0));
+        pixels.setPixelColor(0, pixels.Color(100, 10, 50));
         pixels.show();
         itryckt_tid = knapptid(itryckt);
-        pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+        pixels.setPixelColor(0, pixels.Color(50, 50, 50));
         pixels.show();
         // ger tid i millisekunder som den är itryckt.
       }
@@ -386,8 +394,6 @@ void loop() {
     }
 
     if (steg == 2) {
-    //encoder.setPosition(0);
-    //lastPos = 0;
     counter = 0;
     lastStateCLK = 0;
     lcd_pomodoro_setup();
@@ -404,10 +410,10 @@ void loop() {
       int itryckt = kolla_knappar(steg);
       // om knapp itryckt: hur länge är den itryckt? 
       if (itryckt != 67) {
-        pixels.setPixelColor(0, pixels.Color(150, 0, 0));
+        pixels.setPixelColor(0, pixels.Color(100, 50, 10));
         pixels.show();
         itryckt_tid = knapptid(itryckt);
-        pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+        pixels.setPixelColor(0, pixels.Color(50, 50, 50));
         pixels.show();
         // ger tid i millisekunder som den är itryckt.
       }
@@ -429,8 +435,16 @@ void loop() {
 
     //steg 3: kör programmet enligt instruktioner från 1-2.
     while (steg == 3) {
+      if (mode == 1) {
+        pomodorocykel(0);
+      }
+      else if (mode == 4) {
+        pris(true);
+      }
       // kör pomodoro här.
-      pomodoromaskin(antal_pomodoro, mode); // lägg in de andra variablarna allt eftersom.
+      else {
+        pomodoromaskin(); // lägg in de andra variablarna allt eftersom.
+      }
       steg = 67;
       igang = 0;
     }
