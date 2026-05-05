@@ -185,6 +185,10 @@ bool lcd_update_checker() {
     skib = 100;
     idi = 6;
 
+    if ( steg == 3) {
+      skib = 500;
+    }
+
   unsigned long sixseven = millis();
   if ((sixseven % skib) == idi) {
     return true;
