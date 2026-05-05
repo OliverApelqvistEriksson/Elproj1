@@ -74,8 +74,9 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 
 void setup() {
+  Serial.begin(115200);
+
   //neopixel
-  Serial.begin(9600);
   pixels.begin();
 
   //snurrknapp
@@ -83,7 +84,6 @@ void setup() {
   //snurrknapp lösning 2 lastStateCLK
   pinMode(CLK, INPUT_PULLUP); // Critical for 3-pin encoders
   pinMode(DT, INPUT_PULLUP);
-  Serial.begin(9600);
   lastStateCLK = digitalRead(CLK);
 
   Servo1.attach(servoPin);
@@ -101,7 +101,6 @@ void setup() {
   analogWrite(enb, 5);
 
   //strömgrej
-  Serial.begin(115200);
   ina219.begin();
   
   pinMode(outputPin, OUTPUT);
@@ -183,16 +182,22 @@ void update_lcd() {
 bool lcd_update_checker() { 
   int skib;
   int idi;
+  int rizz;
   if (steg != 3) {
     skib = 100;
-    idi = 7;
+    idi = 6;
+    rizz = 7;
   }
   else if (steg == 3) {
     skib = 1000;
     idi = 67;
+    rizz = 69;
   }
   unsigned long sixseven = millis();
   if ((sixseven % skib) == idi) {
+    return true;
+  }
+  else if ((sixseven % skib) == rizz) {
     return true;
   }
   return false;
@@ -262,7 +267,7 @@ void lock() {
 
 
 void kontrollera_counter() {
-  int max1 = 4;
+  int max1 = 5;
   int max2 = 9;
   int currentStateCLK = digitalRead(CLK);
 
@@ -369,6 +374,13 @@ bool kontrollera_mobil() {
   bool overrideActive = (digitalRead(overridePin) == LOW);
   bool isRunning = (digitalRead(outputPin) == HIGH);
   
+  // Serial Plotter data
+  Serial.print(0); Serial.print(" ");
+  Serial.print(1000); Serial.print(" ");
+  Serial.println(current_mA); 
+  
+  delay(50);
+
   // Logik för indikering och systemstart
   // Systemet räknas som "aktivt" om strömmen > 200 mA ELLER override är på
   if (current_mA > 200|| overrideActive) { 
@@ -382,12 +394,7 @@ bool kontrollera_mobil() {
     return false;
   }
 
-  // Serial Plotter data
-  Serial.print(0); Serial.print(" ");
-  Serial.print(1000); Serial.print(" ");
-  Serial.println(current_mA); 
-  
-  delay(50);
+
 }
 
 
@@ -521,14 +528,18 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
 
 
 void pomodoromaskin() { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
-  for (; antal_pomodoro >= 0; antal_pomodoro--) {
-    if (mode == 1) {
+  if ((mode == 1) || (mode == 4)) {
+    for (; antal_pomodoro >= 0; antal_pomodoro--) {
       pomodorocykel(0);
     }
-    else {
+    return;
+  }
+  else {
+    for (; antal_pomodoro >= 0; antal_pomodoro--) {
       pomodorocykel(25);
     }
-  }
+    return;
+    }
 }
 
 
