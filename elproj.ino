@@ -151,7 +151,7 @@ void lcd_tidkvar(int kvar, bool pom) {
   }
   lcd.setCursor(0,1);
   lcd.print("Sek kvar: ");
-  lcd.setCursor(6, 1);
+  lcd.setCursor(10, 1);
   lcd.print(kvar);
 
 }
