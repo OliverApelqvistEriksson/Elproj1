@@ -19,6 +19,15 @@
 // Servobibblan
 #include <Servo.h>
 
+//strömkollare
+#include <Wire.h>
+#include <Adafruit_INA219.h>
+
+Adafruit_INA219 ina219;
+
+const int outputPin = 2; //Du får bestämma pinsen själv
+const int overridePin = 5; 
+
 // Servopin
 int servoPin = 10;
 
@@ -91,6 +100,13 @@ void setup() {
   analogWrite(ena, 5); 
   analogWrite(enb, 5);
 
+  //strömgrej
+  Serial.begin(115200);
+  ina219.begin();
+  
+  pinMode(outputPin, OUTPUT);
+  pinMode(overridePin, INPUT_PULLUP); 
+
   //startsignal
   //lcd
   lcd.init(); //initialize the lcd
@@ -154,6 +170,8 @@ void update_lcd() {
     if (mode == 3){
       lcd.print("duk");}
     if (mode == 4){
+      lcd.print("dts");}
+    if (mode == 5){
       lcd.print("dis");}
 
 
@@ -163,8 +181,18 @@ void update_lcd() {
 }
 
 bool lcd_update_checker() { 
+  int skib;
+  int idi;
+  if (steg != 3) {
+    skib = 100;
+    idi = 7;
+  }
+  else if (steg == 3) {
+    skib = 1000;
+    idi = 67;
+  }
   unsigned long sixseven = millis();
-  if ((sixseven % 1000) == 67) {
+  if ((sixseven % skib) == idi) {
     return true;
   }
   return false;
@@ -337,32 +365,58 @@ void pris(bool sista) {
 
 
 bool kontrollera_mobil() {
-  // ersätt den här
-  return true;
+  float current_mA = ina219.getCurrent_mA();
+  bool overrideActive = (digitalRead(overridePin) == LOW);
+  bool isRunning = (digitalRead(outputPin) == HIGH);
+  
+  // Logik för indikering och systemstart
+  // Systemet räknas som "aktivt" om strömmen > 200 mA ELLER override är på
+  if (current_mA > 200|| overrideActive) { 
+    return true;    
+  } 
+  else if (current_mA >= 150 && isRunning) {
+    // Mellanläge så den inte stängs av i förtid
+    return true;
+  } 
+  else {
+    return false;
+  }
+
+  // Serial Plotter data
+  Serial.print(0); Serial.print(" ");
+  Serial.print(1000); Serial.print(" ");
+  Serial.println(current_mA); 
+  
+  delay(50);
 }
 
 
-void varning() {
+bool varning() {
   delay(1000);
-  if (kontrollera_mobil() == false) {
-    return;
+  if (kontrollera_mobil() == true) {
+    return true;
   }
-
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Ställ tillbaka");
+  lcd.setCursor(0,1);
+  lcd.print("mobilen!");
   for (int i=0; i<10; i++) {
     spela_buzzer(200, 200);
   }
   
-  if (kontrollera_mobil() == false) {
-    return;
+  if (kontrollera_mobil() == true) {
+    return true;
   }
 
   for (int i=0; i<1; i++) {
     spela_buzzer(3000, 0);
   }
   
-  if (kontrollera_mobil() == false) {
-    return;
+  if (kontrollera_mobil() == true) {
+    return true;
   }
+  return false;
 }
 
 void pausTimer() {
@@ -404,8 +458,13 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
 
     unsigned long cykeltid = millis() - cykelstart;
     unsigned long tid1 = (cykeltid/1000);
-    if (kontrollera_mobil() == false) {
-      varning();
+    
+    if ((kontrollera_mobil() == false) && (mode != 3) && (mode != 4)) {
+      bool tillbaka = false;
+      tillbaka = varning();
+      if (tillbaka != true) {
+        return;
+      }
     }
 
     //den här delen funkar ju inte som den ska .......
@@ -443,13 +502,32 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
     }
   }
   bool sista = false;
+  if (antal_pomodoro == 0) {
+    sista = true;
+  }
+
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Pumpar ut godis");
+  lcd.setCursor(0,1);
+  if (sista == true) {
+    lcd.print("Och en dricka ;)");
+  }
+  else {
+    lcd.print("                         ");
+  }
   pris(sista);
 }
 
 
 void pomodoromaskin() { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
-  for (; antal_pomodoro == 0; antal_pomodoro--) {
-    pomodorocykel(25);
+  for (; antal_pomodoro >= 0; antal_pomodoro--) {
+    if (mode == 1) {
+      pomodorocykel(0);
+    }
+    else {
+      pomodorocykel(25);
+    }
   }
 }
 
@@ -543,10 +621,7 @@ void loop() {
 
     //steg 3: kör programmet enligt instruktioner från 1-2.
     while (steg == 3) {
-      if (mode == 1) {
-        pomodorocykel(0);
-      }
-      else if (mode == 4) {
+      if (mode == 5) {
         pris(true);
       }
       // kör pomodoro här.
