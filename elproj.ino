@@ -150,7 +150,7 @@ void lcd_tidkvar(int kvar, bool pom) {
     lcd.print("Ta en paus :)");
   }
   lcd.setCursor(0,1);
-  lcd.print("Kvar: ");
+  lcd.print("Sek kvar: ");
   lcd.setCursor(6, 1);
   lcd.print(kvar);
 
@@ -188,7 +188,7 @@ bool lcd_update_checker() {
     idi = 6;
     rizz = 7;
   }
-  else if (steg == 3) {
+  if (steg == 3) {
     skib = 1000;
     idi = 67;
     rizz = 69;
@@ -399,15 +399,16 @@ bool kontrollera_mobil() {
 
 
 bool varning() {
-  delay(1000);
+  delay(1500);
   if (kontrollera_mobil() == true) {
     return true;
   }
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("Ställ tillbaka");
+  lcd.print("Stoppa tillbaka");
   lcd.setCursor(0,1);
   lcd.print("mobilen!");
+  
   for (int i=0; i<10; i++) {
     spela_buzzer(200, 200);
   }
@@ -444,7 +445,7 @@ void pausTimer() {
           if (itryckt == startknapp && itryckt_tid >= 20) { //starta cykel
             return; }
         }
-      if (cykeltid >= 50000) {
+      if (cykeltid >= 300) {
         break;
       }
       int tid_kvar;
@@ -453,8 +454,6 @@ void pausTimer() {
         lcd_tidkvar(tid_kvar, false);
       }
     }
-    bool sista = false;
-    pris(sista);
 }
 
 void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda istället
@@ -490,8 +489,6 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
           return;
       }
 
-
-
       }
     if ((cykeltid >= 10000) && (length == 0) ) {
       break;
@@ -512,7 +509,6 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
   if (antal_pomodoro == 0) {
     sista = true;
   }
-
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Pumpar ut godis");
@@ -524,6 +520,12 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
     lcd.print("                         ");
   }
   pris(sista);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Tryck på knappen");
+  lcd.setCursor(0,1);
+  lcd.print("Aktivera cykel");
+
 }
 
 
@@ -539,7 +541,7 @@ void pomodoromaskin() { //skulle eventuellt kunna ha att den tar in en str som t
       pomodorocykel(25);
     }
     return;
-    }
+  }
 }
 
 
