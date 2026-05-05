@@ -1,26 +1,20 @@
 
-//lcd
+//LCD
 #include <DIYables_LCD_I2C.h> // Library for LCD
 #include <Stepper.h> // stepper motor
 #include <Adafruit_NeoPixel.h> //gissa
 
-//försök 2 rot encoder
+//Försök 2 rot encoder
 #define CLK A1
 #define DT A2
 
 
-
+//Neopixel
 #ifdef __AVR__
  #include <avr/power.h> // Required for 16 MHz Adafruit Trinket
 #endif
-// Which pin on the Arduino is connected to the NeoPixels?
-#define PIN        A3 // On Trinket or Gemma, suggest changing this to 1
-// How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS 1 // Popular NeoPixel ring size
-// When setting up the NeoPixel library, we tell it how many pixels,
-// and which pin to use to send signals. Note that for older NeoPixel
-// strips you might need to change the third parameter -- see the
-// strandtest example for more information on possible values.
+#define PIN        A3 
+#define NUMPIXELS 1 // En pixel
 
 // Servobibblan
 #include <Servo.h>
@@ -34,7 +28,7 @@ int pos;
 //Servoobjekt
 Servo Servo1;
 
-
+//lcd 
 DIYables_LCD_I2C lcd(0x27, 16, 2); // I2C address 0x27, 16 column and 2 rows
 
 const int stepsPerRev = 200;
@@ -58,12 +52,10 @@ unsigned long starttid = 0;
 int mode = 0;
 int antal_pomodoro = 1;
 int steg;
+int igang;
 
 int counter = 0;
 int lastStateCLK;
-
-
-
 
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -85,11 +77,6 @@ void setup() {
   Serial.begin(9600);
   lastStateCLK = digitalRead(CLK);
 
-  //lcd
-  lcd.init(); //initialize the lcd
-  lcd.backlight(); //open the backlight
-  lcd.setCursor(5, 0);
-
   Servo1.attach(servoPin);
 
  //resten av knapparna
@@ -105,39 +92,48 @@ void setup() {
   analogWrite(enb, 5);
 
   //startsignal
-  lcd.print("Startar...");
-  delay(1000);
+  //lcd
+  lcd.init(); //initialize the lcd
+  lcd.backlight(); //open the backlight
+  lcd.setCursor(0, 0);
+  lcd.print("Perfekt Pomodoro");
+  lcd.setCursor(3,1);
+  lcd.print("..startar..");
   pixels.setPixelColor(0, pixels.Color(50, 50, 50));
   pixels.show();
-  spela_truddilutt(1000, 2000);
+  spela_intro();
   lcd.clear();
 
-
 }
+
 
 void lcd_pomodoro_setup() {
   lcd.clear();
   
   if (steg == 1) {
     lcd.setCursor(0,0);
-    lcd.print("Steg 1 - mode"); 
+    lcd.print("Steg 1: mode");
   }
   else if (steg == 2) {
     lcd.setCursor(0,0);
-    lcd.print("Steg 2 - antal"); 
+    lcd.print("Steg 2: antal");
   }
 
- 
   lcd.setCursor(0,1);
-  lcd.print("MODE "); //kom ihåg att börja Mode-symbol på 5
+  lcd.print("MODE:"); //kom ihåg att börja Mode-symbol på 5
   lcd.setCursor(8,1);
-  lcd.print("ROUNDS: "); // kom ihåg 15
+  lcd.print("RNDS:"); // kom ihåg 15
 }
 
-void lcd_tidkvar(int kvar) {
+void lcd_tidkvar(int kvar, bool pom) {
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("Aktiv Pomodoro!");
+  if (pom == true) {
+    lcd.print("Aktiv Pomodoro!");
+  }
+  else {
+    lcd.print("Ta en paus :)");
+  }
   lcd.setCursor(0,1);
   lcd.print("Kvar: ");
   lcd.setCursor(6, 1);
@@ -161,7 +157,7 @@ void update_lcd() {
       lcd.print("dis");}
 
 
-    lcd.setCursor(15,1);
+    lcd.setCursor(14,1);
     //print här
     lcd.print((antal_pomodoro));
 }
@@ -181,6 +177,13 @@ void spela_buzzer(int buzztid, int paustid) { // behöver uppdateras pga aktiv b
   noTone(buzzer);
   delay(paustid);
 }
+
+void tone_length(int length, int hz) {
+  tone(buzzer, hz);
+  delay(length);
+  noTone(buzzer);
+}
+
 void spela_truddilutt(int buzztid, int crescendo) {
   int inc = crescendo / buzztid;
   for (int x; x < buzztid; x++) {
@@ -189,6 +192,14 @@ void spela_truddilutt(int buzztid, int crescendo) {
     delay(1);
     noTone(buzzer);
   }
+}
+
+void spela_intro() {
+  tone_length(200, 1975);
+  tone_length(100, 1396);
+  tone_length(100, 1567);
+  tone_length(100, 1046);
+  tone_length(300, 1318);
 }
 
 void lock() {
@@ -225,8 +236,8 @@ void lock() {
 void kontrollera_counter() {
   int max1 = 4;
   int max2 = 9;
-
   int currentStateCLK = digitalRead(CLK);
+
   if (currentStateCLK != lastStateCLK && currentStateCLK == HIGH) {
     if (digitalRead(DT) != currentStateCLK) {
       counter--; // Counter-clockwise
@@ -354,6 +365,36 @@ void varning() {
   }
 }
 
+void pausTimer() {
+  unsigned long cykelstart = millis();
+  while (true) {
+
+      unsigned long cykeltid = millis() - cykelstart;
+      unsigned long tid1 = (cykeltid/1000);
+      //den här delen funkar ju inte som den ska .......
+      int itryckt = kolla_knappar();
+        // om knapp itryckt: hur länge är den itryckt? 
+        if (itryckt != 67) {
+          pixels.setPixelColor(0, pixels.Color(50, 50, 0));
+          pixels.show();
+          itryckt_tid = knapptid(itryckt);
+          pixels.setPixelColor(0, pixels.Color(0, 50, 50));
+          pixels.show();
+          if (itryckt == startknapp && itryckt_tid >= 20) { //starta cykel
+            return; }
+        }
+      if (cykeltid >= 50000) {
+        break;
+      }
+      int tid_kvar;
+      if (lcd_update_checker() == true) {
+        tid_kvar = (300)-tid1;
+        lcd_tidkvar(tid_kvar, false);
+      }
+    }
+    bool sista = false;
+    pris(sista);
+}
 
 void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda istället
   //timerstart
@@ -376,7 +417,10 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
         itryckt_tid = knapptid(itryckt);
         pixels.setPixelColor(0, pixels.Color(0, 50, 50));
         pixels.show();
-        if (itryckt == setupknapp && itryckt_tid >= 5000) { //setupknapp
+        if (itryckt == setupknapp && itryckt_tid >= 3000) { //setupknapp
+          antal_pomodoro = 0;
+          igang = 0;
+          steg = 67; 
           return;
       }
 
@@ -389,9 +433,13 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
     if (cykeltid >= 1500000) {
       break;
     }
+    int tid_kvar;
     if (lcd_update_checker() == true) {
-      int tid_kvar = (1500000/1000)-tid1;
-      lcd_tidkvar(tid_kvar);
+      if (length == 0) {
+        tid_kvar = (10)-tid1;
+      }
+      else { tid_kvar = (1500)-tid1; }
+      lcd_tidkvar(tid_kvar, true);
     }
   }
   bool sista = false;
@@ -400,14 +448,14 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
 
 
 void pomodoromaskin() { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
-  for (; antal_pomodoro > 0; antal_pomodoro--) {
+  for (; antal_pomodoro == 0; antal_pomodoro--) {
     pomodorocykel(25);
   }
 }
 
 
 void loop() {
-  int igang = 1;
+  igang = 1;
   steg = 1;
   mode = 0;
   antal_pomodoro = 1;
