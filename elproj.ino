@@ -181,25 +181,15 @@ void update_lcd() {
 
 bool lcd_update_checker() { 
   int skib;
-  int idi;
-  int rizz;
-  if (steg != 3) {
+  int idi;  
     skib = 100;
     idi = 6;
-    rizz = 7;
-  }
-  if (steg == 3) {
-    skib = 1000;
-    idi = 67;
-    rizz = 69;
-  }
+
   unsigned long sixseven = millis();
   if ((sixseven % skib) == idi) {
     return true;
   }
-  else if ((sixseven % skib) == rizz) {
-    return true;
-  }
+
   return false;
 }
 
@@ -344,7 +334,7 @@ void dispenser(){
   if (mode == 2) { i = 2;}
   else { i = 1; }
   snurraStepper(i);
-  delay(5000); // Vänta 5 sekunder låst
+  delay(500); // Vänta 5 sekunder låst
 
 }
 
@@ -379,8 +369,6 @@ bool kontrollera_mobil() {
   Serial.print(1000); Serial.print(" ");
   Serial.println(current_mA); 
   
-  delay(50);
-
   // Logik för indikering och systemstart
   // Systemet räknas som "aktivt" om strömmen > 200 mA ELLER override är på
   if (current_mA > 200|| overrideActive) { 
@@ -399,10 +387,11 @@ bool kontrollera_mobil() {
 
 
 bool varning() {
-  delay(1500);
+  delay(10);
   if (kontrollera_mobil() == true) {
     return true;
   }
+  delay(1000);
   lcd.clear();
   lcd.setCursor(0,0);
   lcd.print("Stoppa tillbaka");
@@ -445,7 +434,7 @@ void pausTimer() {
           if (itryckt == startknapp && itryckt_tid >= 10) { //starta cykel
             return; }
         }
-      if (cykeltid >= 300) {
+      if (cykeltid >= 225) {
         break;
       }
       int tid_kvar;
@@ -453,6 +442,12 @@ void pausTimer() {
         tid_kvar = (300)-tid1;
         lcd_tidkvar(tid_kvar, false);
       }
+      delay(500);
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Tryck på knappen");
+      lcd.setCursor(0,1);
+      lcd.print("Aktivera cykel");
     }
 }
 
@@ -520,24 +515,20 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
     lcd.print("                         ");
   }
   pris(sista);
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("Tryck på knappen");
-  lcd.setCursor(0,1);
-  lcd.print("Aktivera cykel");
+  pausTimer();
 
 }
 
 
 void pomodoromaskin() { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
   if ((mode == 1) || (mode == 4)) {
-    for (; antal_pomodoro >= 0; antal_pomodoro--) {
+    for (; antal_pomodoro >= 1; antal_pomodoro--) {
       pomodorocykel(0);
     }
     return;
   }
   else {
-    for (; antal_pomodoro >= 0; antal_pomodoro--) {
+    for (; antal_pomodoro >= 1; antal_pomodoro--) {
       pomodorocykel(25);
     }
     return;
