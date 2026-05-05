@@ -254,7 +254,7 @@ void lock() {
     }
     else {itryckt_tid = 0;}
 
-    if (itryckt == startknapp && itryckt_tid >= 20) { //startknapp
+    if (itryckt == startknapp && itryckt_tid >= 10) { //startknapp
       // lock stängs
       for (pos = 0; pos <= 90; pos++) {
         Servo1.write(pos);
@@ -442,7 +442,7 @@ void pausTimer() {
           itryckt_tid = knapptid(itryckt);
           pixels.setPixelColor(0, pixels.Color(0, 50, 50));
           pixels.show();
-          if (itryckt == startknapp && itryckt_tid >= 20) { //starta cykel
+          if (itryckt == startknapp && itryckt_tid >= 10) { //starta cykel
             return; }
         }
       if (cykeltid >= 300) {
@@ -581,11 +581,11 @@ void loop() {
       //behövs kod för rot.encoder här.
       //mode = ""; mode ändras till något här som kommer användas till
 
-      if (itryckt == setupknapp && itryckt_tid >= 5000) { //setupknapp
-        // servo_öppnare() // typ nåt sånt här som låter en ladda upp med dricka.
+      if (itryckt == setupknapp && itryckt_tid >= 3000) { //setupknapp
+        lock();
       }
       
-      else if (itryckt == startknapp && itryckt_tid >= 50) { //selectknapp
+      else if (itryckt == startknapp && itryckt_tid >= 10) { //selectknapp
         steg = 2; // den kommer genom kolla_knappar registrera snurrningarna och sedan trycker man select för att gå vidare.
         break;
       }
@@ -620,12 +620,12 @@ void loop() {
 
       //grej för rot. encoder här oxå.
       
-      if (itryckt == setupknapp && itryckt_tid >= 50) { //setupknapp
+      if (itryckt == setupknapp && itryckt_tid >= 10) { //setupknapp
         steg = 1;
         break;
       }
       
-      else if (itryckt == startknapp && itryckt_tid >= 50) { //selectknapp
+      else if (itryckt == startknapp && itryckt_tid >= 10) { //selectknapp
         steg = 3;
         break;
       }
