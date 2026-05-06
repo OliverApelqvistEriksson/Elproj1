@@ -186,7 +186,7 @@ bool lcd_update_checker() {
     idi = 6;
 
     if ( steg == 3) {
-      skib = 500;
+      skib = 300;
     }
 
   unsigned long sixseven = millis();
@@ -239,7 +239,7 @@ void lock() {
     int itryckt = kolla_knappar();
     // om knapp itryckt: hur länge är den itryckt? 
     if (itryckt != 67) {
-      pixels.setPixelColor(0, pixels.Color(150, 0, 0));
+      pixels.setPixelColor(0, pixels.Color(50, 0, 50));
       pixels.show();
       itryckt_tid = knapptid(itryckt);
       pixels.setPixelColor(0, pixels.Color(0, 150, 0));
@@ -375,10 +375,10 @@ bool kontrollera_mobil() {
   
   // Logik för indikering och systemstart
   // Systemet räknas som "aktivt" om strömmen > 200 mA ELLER override är på
-  if (current_mA > 200|| overrideActive) { 
+  if (current_mA > 150|| overrideActive) { 
     return true;    
   } 
-  else if (current_mA >= 150 && isRunning) {
+  else if (current_mA >= 100 && isRunning) {
     // Mellanläge så den inte stängs av i förtid
     return true;
   } 
@@ -395,6 +395,8 @@ bool varning() {
   if (kontrollera_mobil() == true) {
     return true;
   }
+  pixels.setPixelColor(0, pixels.Color(150, 100, 0));
+  pixels.show();
   delay(1000);
   lcd.clear();
   lcd.setCursor(0,0);
@@ -407,14 +409,23 @@ bool varning() {
   }
   
   if (kontrollera_mobil() == true) {
+    pixels.setPixelColor(0, pixels.Color(50, 50, 50));
+    pixels.show();
     return true;
   }
 
   for (int i=0; i<1; i++) {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("SNART SLUTAR");
+    lcd.setCursor(0,1);
+    lcd.print("PROGRAMMET!");
     spela_buzzer(3000, 0);
   }
   
   if (kontrollera_mobil() == true) {
+    pixels.setPixelColor(0, pixels.Color(50, 50, 50));
+    pixels.show();
     return true;
   }
   return false;
@@ -438,7 +449,7 @@ void pausTimer() {
           if (itryckt == startknapp && itryckt_tid >= 10) { //starta cykel
             return; }
         }
-      if (cykeltid >= 225) {
+      if (tid1 >= 150) {
         break;
       }
       int tid_kvar;
@@ -446,7 +457,7 @@ void pausTimer() {
         tid_kvar = (300)-tid1;
         lcd_tidkvar(tid_kvar, false);
       }
-      delay(500);
+      delay(900);
       lcd.clear();
       lcd.setCursor(0,0);
       lcd.print("Tryck på knappen");
