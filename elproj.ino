@@ -222,11 +222,11 @@ void spela_truddilutt(int buzztid, int crescendo) {
 }
 
 void spela_intro() {
-  tone_length(200, 1975);
+  tone_length(150, 1975);
   tone_length(100, 1396);
   tone_length(100, 1567);
   tone_length(100, 1046);
-  tone_length(300, 1318);
+  tone_length(500, 1318);
 }
 
 void lock() {
@@ -259,6 +259,21 @@ void lock() {
   }
 }
 
+void spela_disconnect(){
+  tone_length(150, 1567);
+  tone_length(150, 789);
+  tone_length(200, 932);
+  tone_length(400, 466);
+}
+
+void disconnect_message() {
+  lcd.clear();
+  lcd.setCursor(1,0);
+  lcd.print("Mobilen: Borta");
+  lcd.setCursor(2,1);
+  lcd.print("Locka in ;,(");
+  spela_disconnect();
+}
 
 void kontrollera_counter() {
   int max1 = 5;
@@ -478,7 +493,8 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
     if ((kontrollera_mobil() == false) && (mode != 3) && (mode != 4)) {
       bool tillbaka = false;
       tillbaka = varning();
-      if (tillbaka != true) {
+      if (tillbaka == false) {
+        disconnect_message();
         return;
       }
     }
