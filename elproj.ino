@@ -25,8 +25,8 @@
 
 Adafruit_INA219 ina219;
 
-const int outputPin = 2; //Du får bestämma pinsen själv
-const int overridePin = 5; 
+// const int outputPin = 2; //Du får bestämma pinsen själv
+//const int overridePin = 5; 
 
 // Servopin
 int servoPin = 10;
@@ -103,8 +103,8 @@ void setup() {
   //strömgrej
   ina219.begin();
   
-  pinMode(outputPin, OUTPUT);
-  pinMode(overridePin, INPUT_PULLUP); 
+  //pinMode(outputPin, OUTPUT);
+  //pinMode(overridePin, INPUT_PULLUP); 
 
   //startsignal
   //lcd
@@ -141,7 +141,6 @@ void lcd_pomodoro_setup() {
 }
 
 void lcd_tidkvar(int kvar, bool pom) {
-  lcd.clear();
   lcd.setCursor(0,0);
   if (pom == true) {
     lcd.print("Aktiv Pomodoro!");
@@ -153,6 +152,7 @@ void lcd_tidkvar(int kvar, bool pom) {
   lcd.print("Sek kvar: ");
   lcd.setCursor(10, 1);
   lcd.print(kvar);
+  lcd.print("      ");
 
 }
 
@@ -239,10 +239,10 @@ void lock() {
     int itryckt = kolla_knappar();
     // om knapp itryckt: hur länge är den itryckt? 
     if (itryckt != 67) {
-      pixels.setPixelColor(0, pixels.Color(50, 0, 50));
+      pixels.setPixelColor(0, pixels.Color(0, 50, 150));
       pixels.show();
       itryckt_tid = knapptid(itryckt);
-      pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+      pixels.setPixelColor(0, pixels.Color(50, 50, 50));
       pixels.show();
       // ger tid i millisekunder som den är itryckt.
     }
@@ -371,6 +371,17 @@ void snurraStepper(int varv){
 
 void pris(bool sista) {
   //sätt in dispenserfunktion och kyllådefunktion.
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Pumpar ut godis");
+  lcd.setCursor(0,1);
+  if (sista == true) {
+    lcd.print("Och en dricka ;)");
+  }
+  else {
+    lcd.print("                         ");
+  }
+  
   dispenser();
   if (sista == true) {
     lock();
@@ -380,22 +391,17 @@ void pris(bool sista) {
 
 bool kontrollera_mobil() {
   float current_mA = ina219.getCurrent_mA();
-  bool overrideActive = (digitalRead(overridePin) == LOW);
-  bool isRunning = (digitalRead(outputPin) == HIGH);
+  //bool overrideActive = (digitalRead(overridePin) == LOW);
+  //bool isRunning = (digitalRead(outputPin) == HIGH);
   
   // Serial Plotter data
   Serial.print(0); Serial.print(" ");
   Serial.print(1000); Serial.print(" ");
   Serial.println(current_mA); 
-  
   // Logik för indikering och systemstart
   // Systemet räknas som "aktivt" om strömmen > 200 mA ELLER override är på
-  if (current_mA > 150|| overrideActive) { 
+  if ((current_mA > 150) && (current_mA < 10000)){ 
     return true;    
-  } 
-  else if (current_mA >= 100 && isRunning) {
-    // Mellanläge så den inte stängs av i förtid
-    return true;
   } 
   else {
     return false;
@@ -410,7 +416,7 @@ bool varning() {
   if (kontrollera_mobil() == true) {
     return true;
   }
-  pixels.setPixelColor(0, pixels.Color(150, 100, 0));
+  pixels.setPixelColor(0, pixels.Color(150, 30, 0));
   pixels.show();
   delay(1000);
   lcd.clear();
@@ -448,7 +454,7 @@ bool varning() {
 
 void pausTimer() {
   unsigned long cykelstart = millis();
-  while (true) {
+  while (igang == 1) {
 
       unsigned long cykeltid = millis() - cykelstart;
       unsigned long tid1 = (cykeltid/1000);
@@ -456,15 +462,11 @@ void pausTimer() {
       int itryckt = kolla_knappar();
         // om knapp itryckt: hur länge är den itryckt? 
         if (itryckt != 67) {
-          pixels.setPixelColor(0, pixels.Color(50, 50, 0));
-          pixels.show();
           itryckt_tid = knapptid(itryckt);
-          pixels.setPixelColor(0, pixels.Color(0, 50, 50));
-          pixels.show();
-          if (itryckt == startknapp && itryckt_tid >= 10) { //starta cykel
+          if (itryckt == startknapp && itryckt_tid >= 5) { //starta cykel
             return; }
         }
-      if (tid1 >= 150) {
+      if (tid1 >= 300) {
         break;
       }
       int tid_kvar;
@@ -472,12 +474,7 @@ void pausTimer() {
         tid_kvar = (300)-tid1;
         lcd_tidkvar(tid_kvar, false);
       }
-      delay(900);
-      lcd.clear();
-      lcd.setCursor(0,0);
-      lcd.print("Tryck på knappen");
-      lcd.setCursor(0,1);
-      lcd.print("Aktivera cykel");
+      
     }
 }
 
@@ -485,16 +482,20 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
   //timerstart
   unsigned long cykelstart = millis();
   //kontrollera mobil
-  while (true) {
+  while (igang == 1) {
 
     unsigned long cykeltid = millis() - cykelstart;
     unsigned long tid1 = (cykeltid/1000);
-    
-    if ((kontrollera_mobil() == false) && (mode != 3) && (mode != 4)) {
+    Serial.println("kör pomodoro");
+    if ((kontrollera_mobil() == false) && (mode != 3) && (mode != 4)) { //  
+      Serial.println("kör kontrollera == false");
       bool tillbaka = false;
       tillbaka = varning();
       if (tillbaka == false) {
         disconnect_message();
+        antal_pomodoro = 0;
+        igang = 0;
+        steg = 67;
         return;
       }
     }
@@ -502,24 +503,24 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
     //den här delen funkar ju inte som den ska .......
     int itryckt = kolla_knappar();
       // om knapp itryckt: hur länge är den itryckt? 
-      if (itryckt != 67) {
-        pixels.setPixelColor(0, pixels.Color(50, 50, 0));
-        pixels.show();
-        itryckt_tid = knapptid(itryckt);
-        pixels.setPixelColor(0, pixels.Color(0, 50, 50));
-        pixels.show();
-        if (itryckt == setupknapp && itryckt_tid >= 3000) { //setupknapp
-          antal_pomodoro = 0;
-          igang = 0;
-          steg = 67; 
-          return;
+    if (itryckt != 67) {
+      pixels.setPixelColor(0, pixels.Color(50, 50, 0));
+      pixels.show();
+      itryckt_tid = knapptid(itryckt);
+      pixels.setPixelColor(0, pixels.Color(50, 50, 50));
+      pixels.show();
+      if (itryckt == setupknapp && itryckt_tid >= 3000) { //setupknapp
+        antal_pomodoro = 0;
+        igang = 0;
+        steg = 67; 
+        return;
       }
+    }
 
-      }
     if ((cykeltid >= 10000) && (length == 0) ) {
       break;
     }
-    if (cykeltid >= 1500000) {
+    else if (cykeltid >= 1500000) {
       break;
     }
     int tid_kvar;
@@ -532,40 +533,33 @@ void pomodorocykel(int length) { //kan ta in en string som enkapsulerar båda is
     }
   }
   bool sista = false;
-  if (antal_pomodoro == 0) {
+  if (antal_pomodoro == 1) {
     sista = true;
   }
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("Pumpar ut godis");
-  lcd.setCursor(0,1);
-  if (sista == true) {
-    lcd.print("Och en dricka ;)");
-  }
-  else {
-    lcd.print("                         ");
-  }
+  
   pris(sista);
   pausTimer();
 
 }
 
 
-void pomodoromaskin() { //skulle eventuellt kunna ha att den tar in en str som typ "mode".
-  if ((mode == 1) || (mode == 4)) {
-    for (; antal_pomodoro >= 1; antal_pomodoro--) {
+void pomodoromaskin() {
+  int rundor = antal_pomodoro;
+  for (int i = 0; i < rundor; i++) {
+    antal_pomodoro = rundor - i;
+
+    if ((mode == 1) || (mode == 4)) {
       pomodorocykel(0);
     }
-    return;
-  }
-  else {
-    for (; antal_pomodoro >= 1; antal_pomodoro--) {
+    else {
       pomodorocykel(25);
     }
-    return;
+
+    if (igang == 0) {
+      return;
+    }
   }
 }
-
 
 void loop() {
   igang = 1;
